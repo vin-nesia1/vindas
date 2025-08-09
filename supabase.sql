@@ -140,8 +140,18 @@ GROUP BY user_id;
 GRANT SELECT ON user_stats TO authenticated;
 
 -- RLS for the view
-ALTER VIEW user_stats ENABLE ROW LEVEL SECURITY;
-
+CREATE OR REPLACE VIEW user_stats AS
+SELECT 
+    user_id,
+    COUNT(*) as total_applications,
+    COUNT(*) FILTER (WHERE status = 'pending') as pending_count,
+    COUNT(*) FILTER (WHERE status = 'approved') as approved_count,
+    COUNT(*) FILTER (WHERE status = 'rejected') as rejected_count,
+    MIN(created_at) as first_application,
+    MAX(created_at) as latest_application
+FROM form_data
+WHERE user_id = auth.uid()  -- Add this line to restrict view to current user
+GROUP BY user_id;
 CREATE POLICY "Users can view own stats" ON user_stats
     FOR SELECT USING (auth.uid() = user_id);
 
